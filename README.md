@@ -1,4 +1,4 @@
 goauth2
 =======
 
-Go 
+Go support for https://developers.google.com/+/web/signin/redirect-uri-flow
