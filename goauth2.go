@@ -13,11 +13,13 @@ import (
 var client = http.Client{}
 
 type tokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	IdToken      string `json:"id_token"`
-	ExpiresIn    string `json:"expires_in"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken      string `json:"access_token"`
+	IdToken          string `json:"id_token"`
+	ExpiresIn        string `json:"expires_in"`
+	TokenType        string `json:"token_type"`
+	RefreshToken     string `json:"refresh_token"`
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
 }
 
 type idToken struct {
@@ -45,12 +47,17 @@ func VerifyEmail(clientId, clientSecret, code string, redirectUrl *url.URL) (ema
 		return
 	}
 	defer resp.Body.Close()
+
 	validateResult := &tokenResponse{}
 	if err = json.NewDecoder(resp.Body).Decode(&validateResult); err != nil {
 		return
 	}
 
 	parts := strings.Split(validateResult.IdToken, ".")
+	if len(parts) != 3 {
+		err = fmt.Errorf("Strange id_token in %+v", validateResult)
+		return
+	}
 	encodedIdData := parts[1]
 
 	for len(encodedIdData)%4 != 0 {
