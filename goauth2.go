@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,7 +16,7 @@ var client = http.Client{}
 type tokenResponse struct {
 	AccessToken      string `json:"access_token"`
 	IdToken          string `json:"id_token"`
-	ExpiresIn        string `json:"expires_in"`
+	ExpiresIn        int    `json:"expires_in"`
 	TokenType        string `json:"token_type"`
 	RefreshToken     string `json:"refresh_token"`
 	Error            string `json:"error"`
@@ -49,7 +50,13 @@ func VerifyEmail(clientId, clientSecret, code string, redirectUrl *url.URL) (ema
 	defer resp.Body.Close()
 
 	validateResult := &tokenResponse{}
-	if err = json.NewDecoder(resp.Body).Decode(&validateResult); err != nil {
+	buf := &bytes.Buffer{}
+	if _, err = io.Copy(buf, resp.Body); err != nil {
+		return
+	}
+	bodyString := buf.String()
+	if err = json.NewDecoder(buf).Decode(&validateResult); err != nil {
+		err = fmt.Errorf("Unable to unmarshal %v: %v", bodyString, err)
 		return
 	}
 
@@ -72,6 +79,7 @@ func VerifyEmail(clientId, clientSecret, code string, redirectUrl *url.URL) (ema
 
 	token := &idToken{}
 	if err = json.Unmarshal(idBytes, &token); err != nil {
+		err = fmt.Errorf("Unable to unmarshal %v: %v", string(idBytes), err)
 		return
 	}
 
